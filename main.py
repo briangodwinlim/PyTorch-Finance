@@ -5,18 +5,22 @@ import datetime as dt
 from pprint import pprint
 from torchinfo import summary
 from torch.utils.data import DataLoader
+from sklearn.preprocessing import StandardScaler
 
 from pipeline.train import run
 from pipeline.data import StockDataset
 from pipeline.model import TimeSeriesModel
 from pipeline.utils import Hyperparameter, set_seed
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 
 if __name__ == '__main__':
     # Specify hyperparameters
     hyperparams = Hyperparameter(
         sequence_length = 5,
-        batch_size = 64,
+        batch_size = 32,
         hidden_dim = 32,
         activation = nn.ReLU(),
         dropout = 0,
@@ -50,9 +54,15 @@ if __name__ == '__main__':
         set_seed(i)
 
         # Load dataset    
-        train_dataset = StockDataset(dt.datetime(2018,1,1), dt.datetime(2020,12,31), hyperparams.sequence_length)
-        val_dataset = StockDataset(dt.datetime(2021,1,1), dt.datetime(2021,12,31), hyperparams.sequence_length)
-        test_dataset = StockDataset(dt.datetime(2022,1,1), dt.datetime(2022,12,31), hyperparams.sequence_length)
+        train_dataset = StockDataset(dt.datetime(2018,1,1), dt.datetime(2020,12,31), hyperparams.sequence_length, 
+                                     transform_spec={'features': StandardScaler(), 'targets': StandardScaler(), 
+                                                     'features_fit': True, 'targets_fit': True})
+        val_dataset = StockDataset(dt.datetime(2021,1,1), dt.datetime(2021,12,31), hyperparams.sequence_length,
+                                   transform_spec={'features': train_dataset.features_transform, 'targets': train_dataset.targets_transform, 
+                                                   'features_fit': False, 'targets_fit': False})
+        test_dataset = StockDataset(dt.datetime(2022,1,1), dt.datetime(2022,12,31), hyperparams.sequence_length,
+                                    transform_spec={'features': train_dataset.features_transform, 'targets': train_dataset.targets_transform, 
+                                                    'features_fit': False, 'targets_fit': False})
         
         train_loader = DataLoader(train_dataset, batch_size=hyperparams.batch_size, shuffle=True, num_workers=hyperparams.nworkers)
         val_loader = DataLoader(val_dataset, batch_size=hyperparams.batch_size, shuffle=False, num_workers=hyperparams.nworkers)
@@ -68,7 +78,8 @@ if __name__ == '__main__':
         summary(model)
 
         # Model training
-        test_metrics = run(model, train_loader, val_loader, test_loader, device, loss_fn, metrics, hyperparams)
+        test_metrics = run(model, train_loader, val_loader, test_loader, device, loss_fn, metrics, 
+                           train_dataset.inverse_transform_targets, hyperparams)
     
         # Save results
         for metric in results.keys():

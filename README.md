@@ -36,3 +36,12 @@ The repository is organized as follows.
 - `main.py` contains the code for training the model.
 
 - `tuning.py` contains the code for hyperparameter tuning.
+
+
+## Installation
+
+Install the dependencies with 
+
+```
+pip install -r requirements.txt
+```

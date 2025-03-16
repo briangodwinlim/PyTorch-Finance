@@ -81,14 +81,16 @@ class StockDataset(Dataset):
 
     def inverse_transform_features(self, features):
         if self.features_transform is not None:
-            features = features.numpy()                                         # Convert to numpy.array
+            device = features.device
+            features = features.cpu().numpy()                                   # Convert to numpy.array
             features = self.features_transform.inverse_transform(features)      # Inverse transform features
-            features = torch.from_numpy(features).float()                       # Convert to torch.Tensor
+            features = torch.from_numpy(features).float().to(device)            # Convert to torch.Tensor
         return features
     
     def inverse_transform_targets(self, targets):
         if self.targets_transform is not None:
-            targets = targets.numpy()                                           # Convert to numpy.array
+            device = targets.device
+            targets = targets.cpu().numpy()                                     # Convert to numpy.array
             targets = self.targets_transform.inverse_transform(targets)         # Inverse transform targets
-            targets = torch.from_numpy(targets).float()                         # Convert to torch.Tensor
+            targets = torch.from_numpy(targets).float().to(device)              # Convert to torch.Tensor
         return targets

@@ -25,7 +25,7 @@ norm_layers = {
 
 
 def run(config):    
-    hyperparams = Hyperparameter(**config, nworkers=1)
+    hyperparams = Hyperparameter(**config, nworkers=1, use_amp=True)
     hyperparams.norm = norm_layers[hyperparams.norm]
     hyperparams.activation = nn.ReLU() if hyperparams.activation == 'relu' else nn.Sigmoid()
     
@@ -60,15 +60,17 @@ def run(config):
     # Load model
     model = TimeSeriesModel(input_dim, hyperparams.hidden_dim, output_dim, hyperparams.activation, 
                             hyperparams.dropout, hyperparams.norm, hyperparams.num_layers).to(device)
+    model = torch.compile(model, mode='default')
     
-    # Optimizer + scheduler
+    # Scaler + optimizer + scheduler
+    scaler = torch.amp.GradScaler(device=device.type, enabled=hyperparams.use_amp)
     optimizer = torch.optim.AdamW(model.parameters(), lr=hyperparams.lr, weight_decay=hyperparams.wd)   # Optimizer
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=hyperparams.factor, patience=hyperparams.patience, min_lr=hyperparams.min_lr)      # Scheduler for lr decay
     
     for epoch in range(hyperparams.epochs):
-        loss = train(model, train_loader, device, loss_fn, optimizer)
-        val_metrics, _ = evaluate(model, val_loader, device, metrics, train_dataset.inverse_transform_targets)
-        test_metrics, _ = evaluate(model, test_loader, device, metrics, train_dataset.inverse_transform_targets)
+        loss = train(model, train_loader, device, loss_fn, optimizer, scaler, hyperparams)
+        val_metrics, _ = evaluate(model, val_loader, device, metrics, train_dataset.inverse_transform_targets, hyperparams)
+        test_metrics, _ = evaluate(model, test_loader, device, metrics, train_dataset.inverse_transform_targets, hyperparams)
         scheduler.step(loss)
         
         # Checkpoint results
@@ -85,19 +87,19 @@ if __name__ == '__main__':
 
     # Specify hyperparameter space
     param_space = {
-        'sequence_length': ray.tune.grid_search([5, 10]),
-        'batch_size': ray.tune.grid_search([64, 128]),
-        'hidden_dim': ray.tune.grid_search([16, 32]),
-        'activation': ray.tune.grid_search(['relu', 'sigmoid']),
+        'sequence_length': ray.tune.choice([5, 10]),
+        'batch_size': ray.tune.choice([64, 128]),
+        'hidden_dim': ray.tune.choice([16, 32]),
+        'activation': ray.tune.choice(['relu', 'sigmoid']),
         'dropout': ray.tune.uniform(0, 1),
-        'norm': ray.tune.grid_search(['bn', 'ln', 'none']),
+        'norm': ray.tune.choice(['bn', 'ln', 'none']),
         'num_layers': ray.tune.randint(1, 4),
         'lr': ray.tune.loguniform(1e-4, 1e-2),
         'wd': ray.tune.loguniform(1e-5, 1e-3),
-        'min_lr': ray.tune.grid_search([1e-5]),
+        'min_lr': ray.tune.choice([1e-5]),
         'factor': ray.tune.quniform(0, 1, 0.1),
-        'patience': ray.tune.grid_search([10]),
-        'epochs': ray.tune.grid_search([100]),
+        'patience': ray.tune.choice([10]),
+        'epochs': ray.tune.choice([100]),
     }
     
     # Specify hyperparameters to evaluate
@@ -125,7 +127,7 @@ if __name__ == '__main__':
     else:
         tuner = ray.tune.Tuner(
             trainable=ray.tune.with_resources(ray.tune.with_parameters(run), resources={'cpu': 6, 'gpu': 1/4, 'accelerator_type:RTX': 1/4}),
-            tune_config=ray.tune.TuneConfig(mode='min', metric='val_mae', search_alg=search_alg, scheduler=scheduler, num_samples=1),
+            tune_config=ray.tune.TuneConfig(mode='min', metric='val_mae', search_alg=search_alg, scheduler=scheduler, num_samples=100),
             run_config=ray.train.RunConfig(name=exp_name, storage_path=directory, failure_config=ray.train.FailureConfig(max_failures=2), 
                                            checkpoint_config=ray.train.CheckpointConfig(num_to_keep=1)),
             param_space=param_space,

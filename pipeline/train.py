@@ -5,7 +5,7 @@ from torch import nn
 import torch.nn.functional as F
 
 
-def train(model, train_loader, device, loss_fn, optimizer, **kwargs):
+def train(model, train_loader, device, loss_fn, optimizer, scaler, hyperparams, **kwargs):
     model.train()
     
     total_loss, total = 0, 0
@@ -15,11 +15,13 @@ def train(model, train_loader, device, loss_fn, optimizer, **kwargs):
         
         optimizer.zero_grad()
 
-        predictions = model(features)           # Compute model predictions
-        loss = loss_fn(targets, predictions)    # Compute loss
+        with torch.amp.autocast(device_type=device.type, enabled=hyperparams.use_amp):
+            predictions = model(features)           # Compute model predictions
+            loss = loss_fn(targets, predictions)    # Compute loss
         
-        loss.backward()     # Backpropagation with chain rule
-        optimizer.step()    # Gradient descent
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
 
         total = total + targets.shape[0]
         total_loss = total_loss + loss.item() * targets.shape[0]
@@ -28,7 +30,7 @@ def train(model, train_loader, device, loss_fn, optimizer, **kwargs):
 
 
 @torch.no_grad()
-def evaluate(model, data_loader, device, metrics, transform, **kwargs):
+def evaluate(model, data_loader, device, metrics, transform, hyperparams, **kwargs):
     model.eval()
    
     total = 0
@@ -38,11 +40,12 @@ def evaluate(model, data_loader, device, metrics, transform, **kwargs):
         features = features.to(device)      # Move tensors to device
         targets = targets.to(device)        # Move tensors to device
 
-        predictions = model(features)       # Compute model predictions
+        with torch.amp.autocast(device_type=device.type, enabled=hyperparams.use_amp):
+            predictions = model(features)   # Compute model predictions
         
         # Compute (inverse) transformations
-        targets = transform(targets.cpu()).to(device)
-        predictions = transform(predictions.cpu()).to(device)
+        targets = transform(targets)
+        predictions = transform(predictions)
         
         # Compute metrics
         total = total + targets.shape[0]
@@ -65,13 +68,14 @@ def evaluate(model, data_loader, device, metrics, transform, **kwargs):
 
 
 def run(model, train_loader, val_loader, test_loader, device, loss_fn, metrics, transform, hyperparams, **kwargs):
+    scaler = torch.amp.GradScaler(device=device.type, enabled=hyperparams.use_amp)
     optimizer = torch.optim.AdamW(model.parameters(), lr=hyperparams.lr, weight_decay=hyperparams.wd)   # Optimizer
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=hyperparams.factor, patience=hyperparams.patience, min_lr=hyperparams.min_lr)      # Scheduler for lr decay
     
     for epoch in range(hyperparams.epochs):
-        loss = train(model, train_loader, device, loss_fn, optimizer, **kwargs)
-        val_metrics, _ = evaluate(model, val_loader, device, metrics, transform, **kwargs)
-        test_metrics, _ = evaluate(model, test_loader, device, metrics, transform, **kwargs)
+        loss = train(model, train_loader, device, loss_fn, optimizer, scaler, hyperparams, **kwargs)
+        val_metrics, _ = evaluate(model, val_loader, device, metrics, transform, hyperparams, **kwargs)
+        test_metrics, _ = evaluate(model, test_loader, device, metrics, transform, hyperparams, **kwargs)
         scheduler.step(loss)
         
         if (epoch + 1) == hyperparams.epochs or (epoch + 1) % hyperparams.log_every == 0:

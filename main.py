@@ -37,6 +37,7 @@ if __name__ == '__main__':
         nworkers = 1,
         nruns = 10,
         log_every = 20,
+        use_amp = True,
     )
 
     # Specify loss_fn and metrics
@@ -75,6 +76,7 @@ if __name__ == '__main__':
         # Load model
         model = TimeSeriesModel(input_dim, hyperparams.hidden_dim, output_dim, hyperparams.activation, 
                                 hyperparams.dropout, hyperparams.norm, hyperparams.num_layers).to(device)
+        model = torch.compile(model, mode='default')
         summary(model)
 
         # Model training

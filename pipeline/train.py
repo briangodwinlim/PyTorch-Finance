@@ -1,5 +1,6 @@
 # This file contains training-related functions
 import torch
+import mlflow
 import numpy as np
 from torch import nn
 import torch.nn.functional as F
@@ -77,6 +78,10 @@ def run(model, train_loader, val_loader, test_loader, device, loss_fn, metrics, 
         val_metrics, _ = evaluate(model, val_loader, device, metrics, transform, hyperparams, **kwargs)
         test_metrics, _ = evaluate(model, test_loader, device, metrics, transform, hyperparams, **kwargs)
         scheduler.step(loss)
+        
+        # [MLFlow] Log metrics
+        current_metrics = {f'val_{metric}': value for metric, value in val_metrics.items()} | {f'test_{metric}': value for metric, value in test_metrics.items()}
+        mlflow.log_metrics(current_metrics, step=epoch)
         
         if (epoch + 1) == hyperparams.epochs or (epoch + 1) % hyperparams.log_every == 0:
             print(f'Epoch {epoch+1:04d} | loss: {loss:.6f} | ' + ' | '.join([f'val_{metric}: {value:.4f}' for metric, value in val_metrics.items()]))

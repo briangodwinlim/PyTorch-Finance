@@ -1,4 +1,6 @@
 __pycache__
+mlartifacts/
+mlruns/
 logs/
 *.log
 *.pkl

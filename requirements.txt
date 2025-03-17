@@ -5,3 +5,4 @@ ray==2.32.0
 scikit-learn==1.5.1
 torch==2.4.0
 torchinfo==1.8.0
+uv==0.6.6

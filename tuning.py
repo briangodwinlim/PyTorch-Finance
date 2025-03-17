@@ -1,12 +1,16 @@
 import os
 import ray
 import torch
+import mlflow
+import tempfile
+import numpy as np
 from torch import nn
 import datetime as dt
+from torchinfo import summary
 from torch.utils.data import DataLoader
 from sklearn.preprocessing import StandardScaler
-from ray.air.integrations.mlflow import MLflowLoggerCallback
 from ray.tune.search.basic_variant import BasicVariantGenerator
+from ray.air.integrations.mlflow import MLflowLoggerCallback, setup_mlflow
 # from ray.tune.search.optuna import OptunaSearch
 # from ray.tune.search import ConcurrencyLimiter
 # from ray.tune.schedulers import ASHAScheduler
@@ -26,6 +30,14 @@ norm_layers = {
 
 
 def run(config):
+    # [MLFLow] Log hyperparameters
+    tracking_uri = config.pop('tracking_uri', None)
+    setup_mlflow(config, tracking_uri=tracking_uri)
+    mlflow.log_params(config)
+    
+    # [MLFlow] Set tag to current run
+    mlflow.set_tag('Training Info', 'Hyperparameter tuning')
+    
     hyperparams = Hyperparameter(**config, nworkers=1, use_amp=True)
     hyperparams.norm = norm_layers[hyperparams.norm]
     hyperparams.activation = nn.ReLU() if hyperparams.activation == 'relu' else nn.Sigmoid()
@@ -63,6 +75,13 @@ def run(config):
                             hyperparams.dropout, hyperparams.norm, hyperparams.num_layers).to(device)
     model = torch.compile(model, mode='default')
     
+    # [MLFlow] Log model summary
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        model_summary_path = os.path.join(tmp_dir, 'model_summary.txt')
+        with open(model_summary_path, 'w') as f:
+            f.write(str(summary(model)))
+        mlflow.log_artifact(model_summary_path)
+
     # Scaler + optimizer + scheduler
     scaler = torch.amp.GradScaler(device=device.type, enabled=hyperparams.use_amp)
     optimizer = torch.optim.AdamW(model.parameters(), lr=hyperparams.lr, weight_decay=hyperparams.wd)   # Optimizer
@@ -78,10 +97,32 @@ def run(config):
         checkpoint = {'loss': loss}
         checkpoint.update({f'val_{metric}': value for metric, value in val_metrics.items()})
         checkpoint.update({f'test_{metric}': value for metric, value in test_metrics.items()})
+        mlflow.log_metrics(checkpoint, step=epoch)
         ray.train.report(checkpoint)
+
+    # [MLFlow] Log model
+    sample_features, sample_targets = train_dataset[0]
+    sample_features, sample_targets = np.expand_dims(sample_features.numpy(), axis=0), np.expand_dims(sample_targets.numpy(), axis=0)
+    signature = mlflow.models.infer_signature(sample_features, sample_targets)
+    mlflow.pytorch.log_model(
+        pytorch_model=model,
+        artifact_path='model',
+        signature=signature,
+        code_paths=[os.path.join(base_path, 'pipeline')],
+    )
 
 
 if __name__ == '__main__':
+    # Specify directories
+    base_path = os.getcwd()
+    directory = os.path.join(base_path, 'logs/')
+    exp_name = f'Hyperparameter Tuning @ {dt.datetime.now().strftime('%Y-%m-%d %H-%M-%S')}'
+    
+    # [MLFlow] Experiment set-up
+    ## Run `mlflow server --host 127.0.0.1 --port 8080` (before running this script)
+    mlflow.set_tracking_uri(uri='http://127.0.0.1:8080')
+    mlflow.set_experiment(exp_name)
+    
     # Specify loss_fn and metrics
     loss_fn = nn.MSELoss()
     metrics = {'mse': nn.MSELoss(), 'mae': nn.L1Loss()}
@@ -101,16 +142,12 @@ if __name__ == '__main__':
         'factor': ray.tune.quniform(0, 1, 0.1),
         'patience': ray.tune.choice([10]),
         'epochs': ray.tune.choice([100]),
+        'tracking_uri': mlflow.get_tracking_uri(),
     }
     
     # Specify hyperparameters to evaluate
     hyperparams = [
     ]
-    
-    # Specify directories
-    base_path = os.getcwd()
-    directory = os.path.join(base_path, 'logs/')
-    exp_name = f'Model Training @ {dt.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}'
     
     search_alg = BasicVariantGenerator(points_to_evaluate=hyperparams, max_concurrent=4)
     scheduler = None
@@ -131,13 +168,14 @@ if __name__ == '__main__':
             tune_config=ray.tune.TuneConfig(mode='min', metric='val_mae', search_alg=search_alg, scheduler=scheduler, num_samples=100),
             run_config=ray.train.RunConfig(name=exp_name, storage_path=directory, failure_config=ray.train.FailureConfig(max_failures=2), 
                                            checkpoint_config=ray.train.CheckpointConfig(num_to_keep=1),
-                                           callbacks=[
-                                               MLflowLoggerCallback(
-                                                   tracking_uri=None,   # [MLFlow] Include the tracking uri if available
-                                                   experiment_name=exp_name,
-                                                   save_artifact=True,
-                                                )
-                                               ],
+                                        #   [MLFlow] Alternative method for logging
+                                        #    callbacks=[
+                                        #        MLflowLoggerCallback(
+                                        #            tracking_uri=None,   # [MLFlow] Include the tracking uri if available
+                                        #            experiment_name=exp_name,
+                                        #            save_artifact=True,
+                                        #         )
+                                        #        ],
                                            ),
             param_space=param_space,
         )

@@ -53,7 +53,7 @@ if __name__ == '__main__':
     ## Option 1: Run `mlflow server --host 127.0.0.1 --port 8080` (before running this script) and uncomment the code below
     # mlflow.set_tracking_uri(uri='http://127.0.0.1:8080')
     ## Option 2: Run `mlflow ui --port 8080` (after running this script) on the current directory 
-    mlflow.set_experiment(f'Model Training @ {dt.datetime.now().strftime('%Y/%m/%d %H:%M:%S')}')
+    mlflow.set_experiment(f'Model Training @ {dt.datetime.now().strftime('%Y-%m-%d %H-%M-%S')}')
     
     # Perform training
     results = {metric: [] for metric in metrics.keys()}
@@ -104,11 +104,13 @@ if __name__ == '__main__':
 
             # [MLFlow] Log model
             sample_features, sample_targets = train_dataset[0]
-            signature = mlflow.models.infer_signature(sample_features.numpy(), sample_targets.numpy())
+            sample_features, sample_targets = np.expand_dims(sample_features.numpy(), axis=0), np.expand_dims(sample_targets.numpy(), axis=0)
+            signature = mlflow.models.infer_signature(sample_features, sample_targets)
             mlflow.pytorch.log_model(
                 pytorch_model=model,
                 artifact_path='model',
                 signature=signature,
+                code_paths=['pipeline'],
             )
 
             # Save results

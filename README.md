@@ -16,6 +16,8 @@ The repository is organized as follows.
 │   └── 📄 utils.py
 ├── 📄 .gitignore
 ├── 📄 main.py
+├── 📄 requirements.txt
+└── 📄 serve.py
 └── 📄 tuning.py
 ```
 
@@ -34,6 +36,8 @@ The repository is organized as follows.
     - `pipeline/utils.py` contains additional utility classes and functions.
 
 - `main.py` contains the code for training the model.
+
+- `serve.py` contains the code for serving the model.
 
 - `tuning.py` contains the code for hyperparameter tuning.
 

@@ -1,4 +1,5 @@
 __pycache__
+docker_deployment/
 mlartifacts/
 mlruns/
 logs/

@@ -15,10 +15,11 @@ The repository is organized as follows.
 │   ├── 📄 train.py
 │   └── 📄 utils.py
 ├── 📄 .gitignore
-├── 📄 main.py
 ├── 📄 requirements.txt
-└── 📄 serve.py
 └── 📄 tuning.py
+├── 📄 main.py
+└── 📄 serve.py
+└── 📄 deploy.py
 ```
 
 - `pipeline` is a custom package for handling the different components of model training.
@@ -35,11 +36,13 @@ The repository is organized as follows.
 
     - `pipeline/utils.py` contains additional utility classes and functions.
 
+- `tuning.py` contains the code for hyperparameter tuning.
+
 - `main.py` contains the code for training the model.
 
-- `serve.py` contains the code for serving the model.
+- `serve.py` contains the code for locally serving the model.
 
-- `tuning.py` contains the code for hyperparameter tuning.
+- `deploy.py` contains the code for deploying the model to Docker.
 
 
 ## Installation

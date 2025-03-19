@@ -50,4 +50,4 @@ get_flavor_backend(model_uri, docker_build=True, env_manager=env_manager).genera
 #     enable_mlserver=enable_mlserver,
 #     base_image=base_image,
 # )
-# os.system(f'docker run --rm --gpus all --publish {exposed_port}:8000 --env DISABLE_NGINX=true \"{image_name}\"')
+# os.system(f'docker run --rm --gpus all --publish {exposed_port}:8000 --env DISABLE_NGINX=true --env UVICORN_HOST=0.0.0.0 \"{image_name}\"')

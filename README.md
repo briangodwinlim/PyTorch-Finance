@@ -18,6 +18,7 @@ The repository is organized as follows.
 ├── 📄 requirements.txt
 └── 📄 tuning.py
 ├── 📄 main.py
+├── 📄 app.py
 └── 📄 serve.py
 └── 📄 deploy.py
 ```
@@ -39,6 +40,8 @@ The repository is organized as follows.
 - `tuning.py` contains the code for hyperparameter tuning.
 
 - `main.py` contains the code for training the model.
+
+- `app.py` contains the code for an inference front-end for the model.
 
 - `serve.py` contains the code for locally serving the model.
 

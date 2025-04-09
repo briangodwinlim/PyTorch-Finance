@@ -21,7 +21,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 if __name__ == '__main__':
     # Specify hyperparameters
     hyperparams = Hyperparameter(
-        sequence_length = 5,
+        sequence_length = 10,
         batch_size = 32,
         hidden_dim = 32,
         activation = nn.ReLU(),

@@ -25,6 +25,9 @@ device = next(model.parameters()).device
 def inference(features):
     model.eval()
     
+    if np.where(features == '')[0].size > 0 or features.ndim != 2:
+        raise gr.Error('Input must not contain missing values', duration=5, title='Missing values')
+    
     features = train_dataset.features_transform.transform(features)
     features = torch.from_numpy(features).float().unsqueeze(0)
     predictions = model(features.to(device)).cpu().numpy()
@@ -34,37 +37,85 @@ def inference(features):
     return predictions
 
 # Set-up Gradio interface
-app = gr.Interface(
-    fn=inference,
-    inputs=gr.Dataframe(
-        headers=['AC', 'BPI', 'GTCAP', 'JFC', 'SM'],
-        row_count=train_dataset.sequence_length,
-        col_count=5,
-        datatype='number',
-        type='numpy',
-        label=f'Input sequential features ({train_dataset.sequence_length}, 5)',
-        show_copy_button=True,
-        show_row_numbers=True,
-    ),
-    outputs=gr.Dataframe(
-        headers=['PSE'],
-        row_count=1,
-        col_count=1,
-        datatype='number',
-        type='numpy',
-        label='PSE prediction',
-        show_copy_button=True,
-    ),
-    examples=[
-        train_dataset.targets_transform.inverse_transform(train_dataset[0][0].numpy()).astype(np.float16),
-        train_dataset.targets_transform.inverse_transform(train_dataset[1][0].numpy()).astype(np.float16),
-    ],
-    example_labels=['Sample input 1', 'Sample input 2'],
-    live=False,
-    title='TimeSeriesModel Inference',
-    description='A front-end for model inference demonstration',
-    theme=gr.themes.Soft(),
-)
+# app = gr.Interface(
+#     fn=inference,
+#     inputs=gr.Dataframe(
+#         headers=['AC', 'BPI', 'GTCAP', 'JFC', 'SM'],
+#         row_count=train_dataset.sequence_length,
+#         col_count=5,
+#         datatype='number',
+#         type='numpy',
+#         label=f'Input sequential features ({train_dataset.sequence_length}, 5)',
+#         show_copy_button=True,
+#         show_row_numbers=True,
+#     ),
+#     outputs=gr.Dataframe(
+#         headers=['PSE'],
+#         row_count=1,
+#         col_count=1,
+#         datatype='number',
+#         type='numpy',
+#         label='PSE prediction',
+#         show_copy_button=True,
+#     ),
+#     examples=[
+#         train_dataset.targets_transform.inverse_transform(train_dataset[0][0].numpy()).astype(np.float16),
+#         train_dataset.targets_transform.inverse_transform(train_dataset[1][0].numpy()).astype(np.float16),
+#     ],
+#     example_labels=['Sample input 1', 'Sample input 2'],
+#     live=False,
+#     title='TimeSeriesModel Inference',
+#     description='A front-end for model inference demonstration',
+#     theme=gr.themes.Soft(),
+# )
+
+# Set-up Gradio blocks
+with gr.Blocks(theme=gr.themes.Soft(), title='TimeSeriesModel Inference') as app:
+    gr.HTML('<h1 style="text-align: center; margin-bottom: 1rem">TimeSeriesModel Inference</h1>')
+    gr.Markdown('A front-end for model inference demonstration')
+    
+    with gr.Row():
+        with gr.Column(scale=4):
+            features=gr.Dataframe(
+                headers=['AC', 'BPI', 'GTCAP', 'JFC', 'SM'],
+                row_count=train_dataset.sequence_length,
+                col_count=5,
+                datatype='number',
+                type='numpy',
+                label=f'Input sequential features ({train_dataset.sequence_length}, 5)',
+                show_copy_button=True,
+                show_row_numbers=True,
+            )
+        with gr.Column(scale=1):
+            predictions=gr.Dataframe(
+                headers=['PSE'],
+                row_count=1,
+                col_count=1,
+                datatype='number',
+                type='numpy',
+                label='PSE prediction',
+                show_copy_button=True,
+            )
+    
+    with gr.Row():
+        submit = gr.Button(value='Submit', variant='primary', scale=0)
+        clear = gr.ClearButton(value='Clear', variant='secondary', scale=0)
+        submit.click(fn=inference, inputs=features, outputs=predictions)
+        clear.add([features, predictions])
+    
+    with gr.Row():
+        examples = gr.Examples(
+            examples=[
+                train_dataset.targets_transform.inverse_transform(train_dataset[0][0].numpy()).astype(np.float16),
+                train_dataset.targets_transform.inverse_transform(train_dataset[1][0].numpy()).astype(np.float16),
+            ],
+            inputs=features,
+            outputs=predictions,
+            fn=inference,
+            label='Sample inputs',
+            run_on_click=True,
+            example_labels=['Sample input 1', 'Sample input 2'],
+        )
 
 
 if __name__ == '__main__':

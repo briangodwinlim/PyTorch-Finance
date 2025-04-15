@@ -1,6 +1,7 @@
 import torch
 import mlflow
 import numpy as np
+import pandas as pd
 import gradio as gr
 import datetime as dt
 from pipeline.data import StockDataset
@@ -35,6 +36,14 @@ def inference(features):
     predictions = predictions.squeeze(0).astype(np.float16)
     
     return predictions
+
+# Set-up file upload function call
+def upload_csv(file):
+    df = pd.read_csv(file.name)
+    df = df[['AC', 'BPI', 'GTCAP', 'JFC', 'SM']]
+    df = df.tail(train_dataset.sequence_length)
+    features = df.to_numpy()
+    return features, inference(features)
 
 # Set-up Gradio interface
 # app = gr.Interface(
@@ -103,7 +112,10 @@ with gr.Blocks(theme=gr.themes.Soft(), title='TimeSeriesModel Inference') as app
         submit.click(fn=inference, inputs=features, outputs=predictions)
         clear.add([features, predictions])
     
-    with gr.Row():
+    with gr.Row(equal_height=True):
+        upload = gr.UploadButton(label='Upload', variant='secondary', icon='https://uxwing.com/wp-content/themes/uxwing/download/web-app-development/upload-icon.svg',
+                                 scale=0, type='filepath', file_count='single', file_types=['.csv'])
+        upload.upload(fn=upload_csv, inputs=upload, outputs=[features, predictions])
         examples = gr.Examples(
             examples=[
                 train_dataset.targets_transform.inverse_transform(train_dataset[0][0].numpy()).astype(np.float16),

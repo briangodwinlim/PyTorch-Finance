@@ -1,0 +1,31 @@
+data:
+  sequence_length:  10
+  raw_path:         dataset/raw
+  cache_path:       dataset/cached
+  data_file:        sample_data.csv
+
+mlflow:
+  uri:              http://127.0.0.1:8080
+  source_run_id:    8d7f672b472d4c6084abaaba65d95cce
+  model_name:       model_00000
+  model_uri:        runs:/${mlflow.source_run_id}/${mlflow.model_name}
+
+app:
+  title:            TimeSeriesModel Inference
+  host:             localhost
+  port:             7860
+
+serve:
+  api_host:         localhost
+  api_port:         8000
+  api_timeout:      60
+  env_manager:      uv
+  enable_mlserver:  False
+  
+deploy:
+  image_name:       timeseriesmodel
+  env_manager:      conda
+  enable_mlserver:  False
+  base_image:       'python:3.12'
+  output_dir:       docker_deployment
+  port:             8000

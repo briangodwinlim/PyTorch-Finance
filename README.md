@@ -5,53 +5,105 @@ This repository provides a starter code for a finance deep learning project usin
 The repository is organized as follows.
 
 ```
-├── 📂 pipeline/
-│   ├── 📂 dataset/
-│   │   └── 📂 raw/
-│   │       └── 📄 sample_data.csv
+├── 📂 config/
+│   ├── 📄 tune.yaml
+│   ├── 📄 train.yaml
+│   └── 📄 inference.yaml
+├── 📂 dataset/
+│   └── 📂 raw/
+│       └── 📄 sample_data.csv
+├── 📂 src/
 │   ├── 📄 __init__.py
 │   ├── 📄 data.py
 │   ├── 📄 model.py
+│   ├── 📄 utils.py
+│   ├── 📄 tune.py
 │   ├── 📄 train.py
-│   └── 📄 utils.py
+│   ├── 📄 app.py
+│   ├── 📄 serve.py
+│   └── 📄 deploy.py
 ├── 📄 .gitignore
-├── 📄 requirements.txt
-└── 📄 tuning.py
-├── 📄 main.py
-├── 📄 app.py
-└── 📄 serve.py
-└── 📄 deploy.py
+└── 📄 requirements.txt
 ```
 
-- `pipeline` is a custom package for handling the different components of model training.
+- `config` contains the default YAML configuration files for the scripts.
 
-    - `pipeline/dataset/raw/` is the directory for placing raw data files.
+    - `config/tune.yaml` contains the hyperparameters and configurations for `src/tune.py`.
+    
+    - `config/train.yaml` contains the hyperparameters and configurations for `src/train.py`.
 
-    - `pipeline/dataset/raw/sample_data.csv` contains a sample PSE data.
+    - `config/inference.yaml` contains the configurations for `src/app.py`, `src/serve.py`, and `src/deploy.py`.
 
-    - `pipeline/data.py` contains data-related classes and functions.
+- `dataset` is the directory for raw and processed data files.
 
-    - `pipeline/model.py` contains model-related classes and functions.
+    - `dataset/raw/` is the directory for placing raw data files.
 
-    - `pipeline/train.py` contains training-related functions.
+    - `dataset/raw/sample_data.csv` contains a sample PSE data.
 
-    - `pipeline/utils.py` contains additional utility classes and functions.
+- `src` contains the Python scripts.
 
-- `tuning.py` contains the code for hyperparameter tuning.
+    - `src/data.py` contains data-related classes and functions.
 
-- `main.py` contains the code for training the model.
+    - `src/model.py` contains model-related classes and functions.
 
-- `app.py` contains the code for an inference front-end for the model.
+    - `src/utils.py` contains additional utility functions.
 
-- `serve.py` contains the code for locally serving the model.
+    - `src/tune.py` contains the code for hyperparameter tuning.
 
-- `deploy.py` contains the code for deploying the model to Docker.
+    - `src/train.py` contains the code for training the model.
+
+    - `src/app.py` contains the code for an inference front-end for the model.
+
+    - `src/serve.py` contains the code for locally serving the model.
+
+    - `src/deploy.py` contains the code for deploying the model to Docker.
 
 
 ## Installation
 
-Install the dependencies with 
+To install the dependencies of this repository, run the command
 
 ```
 pip install -r requirements.txt
+```
+
+
+## Hyperparameter Tuning
+
+To perform hyperparameter tuning, edit the configuration `config/tune.yaml` to specify the search space and then run 
+
+```
+python -m src.tune
+```
+
+
+## Model Training
+
+After tuning the hyperparameters, edit the configuration `config/train.yaml` with the best hyperparameter and then run 
+
+```
+python -m src.train
+```
+
+
+## Model Inference
+
+To perform model inference, edit the configuration `config/inference.yaml` to specify the MLFlow settings. 
+
+Run the following to serve the model with a Gradio frontend app
+
+```
+python -m src.app
+```
+
+Run the following to serve the model locally with an API
+
+```
+python -m src.serve
+```
+
+Run the following to deploy the model with Docker
+
+```
+python -m src.deploy
 ```

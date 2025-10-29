@@ -1,0 +1,66 @@
+data:
+  sequence_length:
+    _target_:       ray.tune.choice
+    categories:     [5, 10]
+  batch_size:
+    _target_:       ray.tune.choice
+    categories:     [32, 64]
+  nworkers:         1
+  raw_path:         dataset/raw
+  cache_path:       dataset/cached
+  data_file:        sample_data.csv
+
+model:
+  hidden_dim:
+    _target_:       ray.tune.choice
+    categories:     [16, 32, 64]
+  activation:
+    _target_:       ray.tune.choice
+    categories:     [relu, sigmoid]
+  dropout:
+    _target_:       ray.tune.uniform
+    lower:          0
+    upper:          1
+  norm:
+    _target_:       ray.tune.choice
+    categories:     [batch, layer, none]
+  num_layers:
+    _target_:       ray.tune.randint
+    lower:          1
+    upper:          4
+
+train:
+  use_amp:          False
+  lr:
+    _target_:       ray.tune.loguniform
+    lower:          1e-4
+    upper:          1e-2
+  wd:
+    _target_:       ray.tune.loguniform
+    lower:          1e-5
+    upper:          1e-3
+  factor:           0.5
+  patience:         10
+  min_lr:           1e-5
+  epochs:           100
+  val_checkpoint:   mse
+
+logging:
+  mlflow_uri:       null
+  output_dir:       outputs
+  best_exp_name:    best_run 
+  exp_name:         ${now:%Y-%m-%d/%H-%M-%S}
+  _exp_name:        tune/${sanitize_exp_name:${logging.exp_name}}   # Do not modify
+
+hydra:
+  run:
+    dir:            ${logging.output_dir}/${logging._exp_name}      # Do not modify
+
+tune:
+  max_concurrent:   4
+  max_t:            120
+  grace_period:     60
+  cpu_count:        6
+  num_samples:      100
+  max_failures:     2
+  verbose:          0

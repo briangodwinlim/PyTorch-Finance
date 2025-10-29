@@ -1,0 +1,36 @@
+data:
+  sequence_length:  10
+  batch_size:       32
+  nworkers:         1
+  raw_path:         dataset/raw
+  cache_path:       dataset/cached
+  data_file:        sample_data.csv
+
+model:
+  hidden_dim:       32
+  activation:       relu
+  dropout:          0
+  norm:             batch
+  num_layers:       1
+
+train:
+  use_amp:          False
+  lr:               1e-3
+  wd:               0
+  factor:           0.5
+  patience:         10
+  min_lr:           1e-5
+  epochs:           100
+  val_checkpoint:   mse
+
+logging:
+  mlflow_uri:       null
+  output_dir:       outputs
+  exp_name:         ${now:%Y-%m-%d/%H-%M-%S}
+  _exp_name:        train/${sanitize_exp_name:${logging.exp_name}}  # Do not modify
+  nruns:            10
+  log_every:        20
+
+hydra:
+  run:
+    dir:            ${logging.output_dir}/${logging._exp_name}      # Do not modify

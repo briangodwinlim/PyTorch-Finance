@@ -6,12 +6,15 @@ The repository is organized as follows.
 
 ```
 ├── 📂 config/
+│   ├── 📄 dvc_pipeline.yaml
 │   ├── 📄 tune.yaml
 │   ├── 📄 train.yaml
 │   └── 📄 inference.yaml
 ├── 📂 dataset/
 │   └── 📂 raw/
 │       └── 📄 sample_data.csv
+├── 📂 notebook/
+│   ├── 📄 inference.ipynb
 ├── 📂 src/
 │   ├── 📄 __init__.py
 │   ├── 📄 data.py
@@ -22,23 +25,29 @@ The repository is organized as follows.
 │   ├── 📄 app.py
 │   ├── 📄 serve.py
 │   └── 📄 deploy.py
-├── 📄 .gitignore
+├── 📄 dvc.yaml
 └── 📄 requirements.txt
 ```
 
 - `config` contains the default YAML configuration files for the scripts.
 
+    - `config/dvc_pipeline.yaml` contains the hyperparameters and configurations for the DVC pipeline in `dvc.yaml`.
+
     - `config/tune.yaml` contains the hyperparameters and configurations for `src/tune.py`.
     
     - `config/train.yaml` contains the hyperparameters and configurations for `src/train.py`.
 
-    - `config/inference.yaml` contains the configurations for `src/app.py`, `src/serve.py`, and `src/deploy.py`.
+    - `config/inference.yaml` contains the configurations for `notebook/inference.ipynb`, `src/app.py`, `src/serve.py`, and `src/deploy.py`.
 
-- `dataset` is the directory for raw and processed data files.
+- `dataset` is the directory for raw and processed data files (to be tracked by DVC).
 
     - `dataset/raw/` is the directory for placing raw data files.
 
     - `dataset/raw/sample_data.csv` contains a sample PSE data.
+
+- `notebook` contains the Jupyter notebooks.
+
+    - `notebook/inference.ipynb` is the notebook for performing model inference and other analysis.
 
 - `src` contains the Python scripts.
 
@@ -58,6 +67,10 @@ The repository is organized as follows.
 
     - `src/deploy.py` contains the code for deploying the model to Docker.
 
+- `dvc.yaml` defines the DVC pipeline for hyperparameter tuning and model training.
+
+- `requirements.txt` lists the Python package dependencies for this repository.
+
 
 ## Installation
 
@@ -66,6 +79,24 @@ To install the dependencies of this repository, run the command
 ```
 pip install -r requirements.txt
 ```
+
+
+## DVC Pipeline
+
+To use the DVC pipeline, first remove the raw dataset from being git-tracked by running the command
+
+```
+git rm -r --cached dataset/raw/sample_data.csv
+git commit -m 'Stopped Tracking Dataset'
+```
+
+To perform hyperparameter tuning and model training using the pipeline, edit the configuration `config/dvc_pipeline.yaml` and then run 
+
+```
+dvc exp run
+```
+
+This will create `params.yaml` containing the final configurations used in the pipeline.
 
 
 ## Hyperparameter Tuning
@@ -88,9 +119,11 @@ python -m src.train
 
 ## Model Inference
 
-To perform model inference, edit the configuration `config/inference.yaml` to specify the MLFlow settings. 
+To perform model inference, edit the configuration `config/inference.yaml` to specify the MLFlow and other settings. 
 
-Run the following to serve the model with a Gradio frontend app
+Run the notebook `notebook/inference.ipynb` to perform model inference and other analysis.
+
+Run the following to serve the model with a Gradio front-end app
 
 ```
 python -m src.app

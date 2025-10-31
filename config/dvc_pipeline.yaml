@@ -1,0 +1,10 @@
+defaults:
+  - train
+  - tune
+  - _self_
+
+logging:
+  exp_name:         ${now:%Y-%m-%d/%H-%M-%S}
+  _exp_name:        dvc_pipeline/${logging.exp_name}        # Do not modify
+  best_exp_name:    ${now:%Y-%m-%d/%H-%M-%S}/best_run 
+  _best_exp_name:   dvc_pipeline/${logging.best_exp_name}   # Do not modify

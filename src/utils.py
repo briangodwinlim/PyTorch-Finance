@@ -1,5 +1,6 @@
 # This file contains additional utility functions
 import os
+import yaml
 import torch
 import random
 import mlflow
@@ -83,7 +84,7 @@ def train_setup(hyperparams, device):
     # Load model
     model = TimeSeriesModel(input_dim, hyperparams.model.hidden_dim, output_dim, hyperparams.model.activation, 
                             hyperparams.model.dropout, hyperparams.model.norm, hyperparams.model.num_layers).to(device)
-    model = torch.compile(model, mode='default')
+    # model = torch.compile(model, mode='default')
     
     # [MLFlow] Log model summary
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -91,6 +92,13 @@ def train_setup(hyperparams, device):
         with open(tmp_path, 'w') as f:
             f.write(str(summary(model)))
         mlflow.log_artifact(tmp_path)
+    
+    # [MLFlow] Log dataset hash
+    mlflow.log_artifact(os.path.join(hyperparams.data.raw_path, hyperparams.data.data_file + '.dvc'))
+    with open(os.path.join(hyperparams.data.raw_path, hyperparams.data.data_file + '.dvc'), 'r') as f:
+        dvc_file_content = f.read() 
+        data_hash = yaml.safe_load(dvc_file_content)['outs'][0]['md5']
+        mlflow.set_tag('DVC Dataset Hash', data_hash)
 
     # Return all variables
     datasets = (train_dataset, val_dataset, test_dataset)

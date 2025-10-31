@@ -1,10 +1,27 @@
 data:
   sequence_length:  10
+  batch_size:       32
+  nworkers:         1
   raw_path:         dataset/raw
   cache_path:       dataset/cached
   data_file:        sample_data.csv
 
-mlflow:
+model:              # Not used but needed
+  hidden_dim:       32
+  activation:       relu
+  dropout:          0
+  norm:             batch
+  num_layers:       1
+
+train:
+  use_amp:          False
+
+logging:            # Model to perform inference
+  _exp_name:        dvc_pipeline/${now:%Y-%m-%d/%H-%M-%S}/best_run 
+  model_dir:        models
+  model_file:       model_00000.onnx
+
+mlflow:             # Model to perform inference
   uri:              http://127.0.0.1:8080
   source_run_id:    8d7f672b472d4c6084abaaba65d95cce
   model_name:       model_00000

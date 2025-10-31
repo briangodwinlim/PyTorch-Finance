@@ -128,12 +128,6 @@ def main(config):
     print(f'Best trial config: {best_result.config}')
     print(f'Best trial val {config.train.val_checkpoint}: {best_val_metric}')
     
-    # Save best config
-    best_config = OmegaConf.merge(config, to_conf(best_result.config | {'hydra.run.dir': '${logging.output_dir}/${logging.best_exp_name}'}))
-    best_config_dir = os.path.join(config.logging.output_dir, config.logging.best_exp_name)
-    os.makedirs(best_config_dir, exist_ok=True)
-    OmegaConf.save(config=best_config, f=os.path.join(best_config_dir, 'config.yaml'))
-    
     # [MLFlow] Tag best run
     client = MlflowClient()
     experiment = client.get_experiment_by_name(config.logging._exp_name)
@@ -147,6 +141,16 @@ def main(config):
         value='Best',
     )
 
+    # Save best config
+    best_config = OmegaConf.merge(config, 
+                                  to_conf(best_result.config | 
+                                          {'logging.exp_name': config.logging.best_exp_name,
+                                           'logging._exp_name': config.logging._best_exp_name,
+                                           'hydra.run.dir': '${logging.output_dir}/${logging._exp_name}'}))
+    best_config_dir = os.path.join(config.logging.output_dir, config.logging._best_exp_name)
+    os.makedirs(best_config_dir, exist_ok=True)
+    OmegaConf.save(config=best_config, f=os.path.join(best_config_dir, 'config.yaml'))
+    
 
 if __name__ == '__main__':
     main()

@@ -22,13 +22,14 @@ train:
   min_lr:           1e-5
   epochs:           100
   val_checkpoint:   mse
+  nruns:            10
 
 logging:
   mlflow_uri:       null
+  model_dir:        models
   output_dir:       outputs
   exp_name:         ${now:%Y-%m-%d/%H-%M-%S}
   _exp_name:        train/${sanitize_exp_name:${logging.exp_name}}  # Do not modify
-  nruns:            10
   log_every:        20
 
 hydra:

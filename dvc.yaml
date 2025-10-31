@@ -1,0 +1,38 @@
+stages:
+  tune:
+    desc: Perform hyperparameter tuning
+    cmd: python -m src.tune hydra.run.dir=${logging.output_dir}/${logging._exp_name}
+      --config-dir . --config-name params
+    deps:
+    - src/data.py
+    - src/tune.py
+    - src/model.py
+    - src/utils.py
+    - ${data.raw_path}
+    - config/dvc_pipeline.yaml
+    outs:
+    - ${logging.output_dir}/${logging._best_exp_name}/config.yaml
+    params:
+    - data.raw_path
+    - logging._exp_name
+    - logging.output_dir
+    - logging._best_exp_name
+
+  train:
+    desc: Perform model training with best hyperparameter
+    cmd: python -m src.train --config-dir ${logging.output_dir}/${logging._best_exp_name}
+      --config-name config
+    deps:
+    - src/data.py
+    - src/train.py
+    - src/model.py
+    - src/utils.py
+    - ${data.raw_path}
+    - ${logging.output_dir}/${logging._best_exp_name}/config.yaml
+    outs:
+    - ${logging.model_dir}/${logging._best_exp_name}
+    params:
+    - data.raw_path
+    - logging.model_dir
+    - logging.output_dir
+    - logging._best_exp_name

@@ -3,6 +3,7 @@ __pycache__
 docker_deployment/
 mlartifacts/
 outputs/
+models/
 mlruns/
 *.log
 *.pkl
